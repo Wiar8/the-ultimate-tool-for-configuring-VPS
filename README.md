@@ -8,9 +8,8 @@ VPS Configurator streamlines the process of setting up and securing your Virtual
 
 ## Features
 
-- **Firewall Setup** - Configure UFW/iptables with sensible defaults
+- **Firewall Setup** - Configure UFW with sensible defaults
 - **Web Servers** - Install and configure Nginx or Apache
-- **Docker** - Install Docker and Docker Compose
 - **SSH Hardening** - Secure SSH configuration (disable root login, change port, key-only auth)
 - **Fail2ban** - Install and configure intrusion prevention
 - **System Updates** - Automated system package updates
@@ -44,14 +43,13 @@ You'll be presented with an interactive menu:
 VPS Configurator
 ================
 1) System Update
-2) Configure Firewall
-3) Install Nginx
-4) Install Apache
-5) Install Docker
-6) Configure SSH
-7) Install Fail2ban
-8) Create User
-9) Exit
+2) Create User
+3) Configure SSH
+4) Configure Firewall (UFW)
+5) Install Fail2ban
+6) Install Nginx
+7) Install Apache
+0) Exit
 ```
 
 ## Requirements
@@ -68,15 +66,15 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ### Core Features (Priority)
 - [ ] System Update module
+- [ ] User Management
+- [ ] SSH Hardening
 - [ ] Firewall Setup (UFW)
+- [ ] Fail2ban setup
 - [ ] Nginx installation
 - [ ] Apache installation
-- [ ] Docker & Docker Compose
-- [ ] SSH Hardening
-- [ ] Fail2ban setup
-- [ ] User Management
 
 ### Extended Features
+- [ ] Docker & Docker Compose
 - [ ] SSL certificate automation (Let's Encrypt)
 - [ ] Database installation (MySQL, PostgreSQL)
 - [ ] Monitoring tools (Netdata, Prometheus)
