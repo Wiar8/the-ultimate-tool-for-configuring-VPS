@@ -111,10 +111,11 @@ show_menu() {
     echo "  6) Install Nginx"
     echo "  7) Install Apache"
     echo "  8) Install Docker & Docker Compose"
+    echo "  9) Install Certbot & SSL"
     echo ""
     echo "  0) Exit"
     echo ""
-    echo -e -n "${CYAN}Select an option [0-8]:${NC} "
+    echo -e -n "${CYAN}Select an option [0-9]:${NC} "
 }
 
 #-------------------------------------------------------------------------------
@@ -642,6 +643,91 @@ EOF
     press_enter
 }
 
+# 9. Install Certbot & SSL
+install_certbot() {
+    print_header
+    echo -e "${BOLD}Install Certbot & SSL Certificate${NC}"
+    echo ""
+
+    # Ensure snapd is installed
+    if ! command -v snap &>/dev/null; then
+        print_info "Installing snapd..."
+        apt update
+        apt install -y snapd
+        print_success "snapd installed"
+    fi
+
+    # Remove existing Certbot OS packages
+    print_info "Removing existing Certbot OS packages..."
+    apt-get remove -y certbot 2>/dev/null || true
+    echo ""
+
+    # Install Certbot via snap
+    print_info "Installing Certbot via snap..."
+    snap install --classic certbot
+    print_success "Certbot installed"
+    echo ""
+
+    # Prepare the Certbot command
+    if [[ ! -L /usr/local/bin/certbot ]]; then
+        print_info "Creating Certbot symlink..."
+        ln -s /snap/bin/certbot /usr/local/bin/certbot 2>/dev/null || true
+    fi
+
+    # SSL Configuration
+    echo -e "${BOLD}SSL Configuration${NC}"
+    echo "Choose your web server type:"
+    echo "  1) Nginx"
+    echo "  2) Apache"
+    echo "  3) Standalone (no web server running)"
+    echo -e -n "${CYAN}Select an option [1-3]:${NC} "
+    read -r server_type
+
+    echo -e -n "${CYAN}Enter your domain name (e.g., example.com):${NC} "
+    read -r domain
+
+    if [[ -z "$domain" ]]; then
+        print_error "Domain name cannot be empty"
+        press_enter
+        return
+    fi
+
+    # Open firewall ports if active
+    if ufw status | grep -q "Status: active"; then
+        print_info "Opening HTTP/HTTPS ports in firewall..."
+        ufw allow 80/tcp
+        ufw allow 443/tcp
+    fi
+
+    case $server_type in
+        1)
+            print_info "Running Certbot for Nginx..."
+            certbot --nginx --non-interactive --agree-tos --register-unsafely-without-email -d "$domain"
+            ;;
+        2)
+            print_info "Running Certbot for Apache..."
+            certbot --apache --non-interactive --agree-tos --register-unsafely-without-email -d "$domain"
+            ;;
+        3)
+            print_info "Running Certbot in Standalone mode..."
+            certbot certonly --standalone --non-interactive --agree-tos --register-unsafely-without-email -d "$domain"
+            ;;
+        *)
+            print_error "Invalid selection"
+            press_enter
+            return
+            ;;
+    esac
+
+    # Verify automatic renewal
+    print_info "Testing automatic renewal..."
+    certbot renew --dry-run
+
+    echo ""
+    print_success "Certbot configuration completed"
+    press_enter
+}
+
 #-------------------------------------------------------------------------------
 # Main loop
 #-------------------------------------------------------------------------------
@@ -662,6 +748,7 @@ main() {
             6) install_nginx ;;
             7) install_apache ;;
             8) install_docker ;;
+            9) install_certbot ;;
             0)
                 print_header
                 print_success "Goodbye!"
