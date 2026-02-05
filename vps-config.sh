@@ -110,10 +110,11 @@ show_menu() {
     echo "  5) Install Fail2ban"
     echo "  6) Install Nginx"
     echo "  7) Install Apache"
+    echo "  8) Install Docker & Docker Compose"
     echo ""
     echo "  0) Exit"
     echo ""
-    echo -e -n "${CYAN}Select an option [0-7]:${NC} "
+    echo -e -n "${CYAN}Select an option [0-8]:${NC} "
 }
 
 #-------------------------------------------------------------------------------
@@ -541,6 +542,94 @@ install_apache() {
     press_enter
 }
 
+# 8. Install Docker & Docker Compose
+install_docker() {
+    print_header
+    echo -e "${BOLD}Install Docker & Docker Compose${NC}"
+    echo ""
+
+    # Check if already installed
+    if command -v docker &>/dev/null; then
+        print_warning "Docker is already installed"
+        docker --version
+        if ! confirm "Reinstall Docker?"; then
+            press_enter
+            return
+        fi
+    fi
+
+    # Cleanup conflicting packages
+    print_info "Removing conflicting packages..."
+    for pkg in docker.io docker-doc docker-compose docker-compose-v2 podman-docker containerd runc; do
+        apt-get remove -y $pkg 2>/dev/null || true
+    done
+    echo ""
+
+    # Prerequisites
+    print_info "Installing prerequisites..."
+    apt update
+    apt install -y ca-certificates curl
+    install -m 0755 -d /etc/apt/keyrings
+    echo ""
+
+    # GPG Key
+    print_info "Adding Docker GPG key..."
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    chmod a+r /etc/apt/keyrings/docker.asc
+    echo ""
+
+    # Repository
+    print_info "Adding Docker repository..."
+    source /etc/os-release
+    cat > /etc/apt/sources.list.d/docker.sources << EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: ${UBUNTU_CODENAME:-$VERSION_CODENAME}
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+    print_success "Repository added"
+    echo ""
+
+    # Install
+    print_info "Installing Docker packages..."
+    apt update
+    apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    print_success "Docker installed"
+    echo ""
+
+    # Enable and start
+    systemctl enable docker
+    systemctl start docker
+    print_success "Docker service started and enabled"
+    echo ""
+
+    # Add user to group
+    if confirm "Add a user to the 'docker' group? (allows running without sudo)"; then
+        local target_user="${SUDO_USER:-$USER}"
+        echo -e -n "${CYAN}Enter username (default: $target_user):${NC} "
+        read -r input_user
+        target_user="${input_user:-$target_user}"
+
+        if id "$target_user" &>/dev/null; then
+            usermod -aG docker "$target_user"
+            print_success "User '$target_user' added to docker group"
+            print_warning "User needs to log out and back in for this to take effect"
+        else
+            print_error "User '$target_user' does not exist"
+        fi
+        echo ""
+    fi
+
+    # Verify
+    print_info "Verifying installation..."
+    docker run hello-world
+    
+    echo ""
+    print_success "Docker installation completed"
+    press_enter
+}
+
 #-------------------------------------------------------------------------------
 # Main loop
 #-------------------------------------------------------------------------------
@@ -560,6 +649,7 @@ main() {
             5) install_fail2ban ;;
             6) install_nginx ;;
             7) install_apache ;;
+            8) install_docker ;;
             0)
                 print_header
                 print_success "Goodbye!"
