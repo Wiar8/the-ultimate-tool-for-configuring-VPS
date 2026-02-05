@@ -238,7 +238,19 @@ configure_ssh() {
     # Disable password authentication
     print_warning "Only disable password auth if you have SSH keys configured!"
     if confirm "Disable password authentication?"; then
+        # Disable PasswordAuthentication
         sed -i "s/^#\?PasswordAuthentication .*/PasswordAuthentication no/" "$sshd_config"
+        
+        # Disable ChallengeResponseAuthentication (KBDInteractiveAuthentication in newer versions)
+        if grep -q "KBDInteractiveAuthentication" "$sshd_config"; then
+            sed -i "s/^#\?KBDInteractiveAuthentication .*/KBDInteractiveAuthentication no/" "$sshd_config"
+        else
+            sed -i "s/^#\?ChallengeResponseAuthentication .*/ChallengeResponseAuthentication no/" "$sshd_config"
+        fi
+
+        # Disable UsePAM
+        sed -i "s/^#\?UsePAM .*/UsePAM no/" "$sshd_config"
+        
         print_success "Password authentication disabled"
         echo ""
     fi
@@ -248,7 +260,7 @@ configure_ssh() {
 
     # Restart SSH service
     if confirm "Restart SSH service to apply changes?"; then
-        systemctl restart sshd
+        systemctl restart ssh
         print_success "SSH service restarted"
     else
         print_warning "Changes will apply after SSH service restart"
